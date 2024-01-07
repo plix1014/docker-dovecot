@@ -1,0 +1,27 @@
+---
+
+version: "3"
+
+services:
+  dec:
+    container_name: ${container_name}
+    image: ${image}
+    volumes:
+      - ${DOVECOT_CONF}:/etc/dovecot/dovecot.conf:ro
+      - ${DOVECOT_PASSWD}:/etc/dovecot/passwd:rw
+      - ${FETCHMAIL_JOBS}:/etc/fetchmail/jobs:ro
+      - ${SSL_CRT}:/etc/dovecot/cert.pem:ro
+      - ${SSL_KEY}:/etc/dovecot/key.pem:ro
+      - ${DATA_MAIL}:/srv/mail
+      - ${DATA_SPAM}:/var/lib/rspamd
+      - ${DATA_FETCHIDS}:/var/lib/fetchmail
+      - ${DATA_LOG}:/var/log
+    environment:
+      FETCHMAIL_ENABLED: ${FETCHMAIL_ENABLED}
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "0.0.0.0:${IMAP_PORT_PLAN}:143"
+      - "0.0.0.0:${IMAP_PORT_SSL}:993"
+      - "0.0.0.0:${SIEVE_PORT}:4190"
+    restart: always
+#
