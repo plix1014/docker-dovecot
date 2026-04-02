@@ -1,7 +1,5 @@
 ---
 
-version: "3"
-
 services:
   dec:
     container_name: ${container_name}
@@ -16,6 +14,10 @@ services:
       - ${DATA_SPAM}:/var/lib/rspamd
       - ${DATA_FETCHIDS}:/var/lib/fetchmail
       - ${DATA_LOG}:/var/log
+      - ${DATA_RSPAMD}:/etc/dovecot/sieve
+      #- ${RSPAM_BAYES_CONF}:/etc/rspamd/override.d/classifier-bayes.conf:ro
+      #- ${RSPAM_SETTINGS_CONF}:/etc/rspamd/local.d/settings.conf:ro
+      #- ${RSPAM_REDIS_CONF}:/etc/rspamd/local.d/redis.conf:ro
     environment:
       FETCHMAIL_ENABLED: ${FETCHMAIL_ENABLED}
       DOMAIN: ${DOMAIN}
@@ -23,5 +25,65 @@ services:
       - "0.0.0.0:${IMAP_PORT_PLAN}:143"
       - "0.0.0.0:${IMAP_PORT_SSL}:993"
       - "0.0.0.0:${SIEVE_PORT}:4190"
+    networks:
+      - dec
+    depends_on:
+      - caddy
+
     restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: always
+    networks:
+      - dec
+    volumes:
+      - ${DATA_REDIS}:/data
+
+  # https://github.com/lucaslorentz/caddy-docker-proxy#custom-images
+  caddy:
+    image: ${caddy_image}
+    container_name: reverse-proxy
+    dns:
+      - 1.1.1.1
+    labels:
+      caddy: ""
+      caddy.debug: ""
+      caddy.log: ""
+      caddy.log.format: console
+      caddy.email: "${caddy_email}"
+      # Add this line to use file storage
+      caddy.storage: "file_system"
+      caddy.storage.root: "/data"
+      
+      # for testing only
+      #caddy.acme_ca: "https://acme-staging-v02.api.letsencrypt.org/directory"
+      caddy_1: "${CADDY_DOMAIN}:443"
+      caddy_1.tls: ""
+      caddy_1.tls.issuer: acme
+      caddy_1.tls.issuer.dns: "duckdns ${DUCKDNS_TOKEN}"
+      caddy_1.tls.issuer.propagation_delay: 300s
+      caddy_1.tls.issuer.propagation_timeout: 600s
+      caddy_1.tls.issuer.resolvers: 1.1.1.1
+      caddy_1.reverse_proxy: "dec:8001"
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      - CADDY_INGRESS_NETWORKS=dec
+      - DUCKDNS_TOKEN=${DUCKDNS_TOKEN}
+      - DOMAIN=https://${CADDY_DOMAIN}
+      - CADDY_LOG_LEVEL=DEBUG
+    networks:
+      - dec
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DATA_CADDY}/caddy-data:/data
+      - ${DATA_CADDY}/caddy-config:/config
+    restart: always
+
+networks:
+  dec:
+    name: dec
 #
