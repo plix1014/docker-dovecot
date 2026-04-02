@@ -12,6 +12,7 @@ Dovecot IMAP server with fetchmail
 I needed a image for ARM. So I had to do a few changes
 - changed base image to debian-12
 - use dovecot packages from debian repo
+- add redis container; rspamd depends on it, otherwise not spam/ham learn is possible
 
 ## Dockerhub
 
